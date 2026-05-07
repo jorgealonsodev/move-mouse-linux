@@ -1,15 +1,29 @@
 app-id: org.movemouse.MoveMouse
 runtime: org.gnome.Platform
-runtime-version: '43'
+runtime-version: "46"
 sdk: org.gnome.Sdk
 command: move-mouse
 
 finish-args:
+  # X11 display + shared memory for MIT-SHM
   - --socket=x11
+  - --share=ipc
+  - --device=dri
+  # D-Bus: screensaver inhibit
   - --talk-name=org.freedesktop.ScreenSaver
+  - --talk-name=org.gnome.SessionManager
+  # D-Bus: session lock/unlock (logind via system bus)
   - --system-talk-name=org.freedesktop.login1
-  - --socket=session-bus
+  # D-Bus: UPower for battery detection
+  - --system-talk-name=org.freedesktop.UPower
+  # D-Bus: AppIndicator tray icon
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=com.canonical.indicator.application
+  - --talk-name=org.ayatana.indicator.application
+  # Settings persistence
   - --filesystem=~/.config/move-mouse-linux:create
+  # Autostart entry
+  - --filesystem=~/.config/autostart:create
 
 modules:
   - name: python3-xlib
@@ -18,7 +32,7 @@ modules:
       - pip3 install --prefix=/app --no-deps .
     sources:
       - type: archive
-        url: https://files.pythonhosted.org/packages/source/p/python-xlib/python-xlib-0.33.tar.gz
+        url: https://files.pythonhosted.org/packages/86/f5/8c0653e5bb54e0cbdfe27bf32d41f27bc4e12faa8742778c17f2a71be2c0/python-xlib-0.33.tar.gz
         sha256: 55af7906a2c75ce6cb280a584776080602444f75815a7aff4d287bb2d7018b32
 
   - name: pydbus
@@ -27,13 +41,24 @@ modules:
       - pip3 install --prefix=/app --no-deps .
     sources:
       - type: archive
-        url: https://files.pythonhosted.org/packages/source/p/pydbus/pydbus-0.6.0.tar.gz
+        url: https://files.pythonhosted.org/packages/58/56/3e84f2c1f2e39b9ea132460183f123af41e3b9c8befe222a35636baa6a5a/pydbus-0.6.0.tar.gz
         sha256: 4207162eff54223822c185da06c1ba8a34137a9602f3da5a528eedf3f78d0f2c
 
   - name: move-mouse
     buildsystem: simple
     build-commands:
-      - pip3 install --prefix=/app .
+      - pip3 install --prefix=/app --no-deps .
+      - install -Dm644 data/org.movemouse.MoveMouse.desktop
+          /app/share/applications/org.movemouse.MoveMouse.desktop
+      - install -Dm644 data/org.movemouse.MoveMouse.metainfo.xml
+          /app/share/metainfo/org.movemouse.MoveMouse.metainfo.xml
+      - for size in 16 24 32 48 64 128 256; do
+          install -Dm644
+            data/icons/hicolor/${size}x${size}/apps/org.movemouse.MoveMouse.png
+            /app/share/icons/hicolor/${size}x${size}/apps/org.movemouse.MoveMouse.png;
+        done
+      - install -Dm644 data/icons/hicolor/scalable/apps/org.movemouse.MoveMouse.svg
+          /app/share/icons/hicolor/scalable/apps/org.movemouse.MoveMouse.svg
     sources:
       - type: dir
-        path: ../.
+        path: ..

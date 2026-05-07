@@ -55,10 +55,58 @@ jobs:
           path: ${{ env.DEB_PATH }}
           retention-days: 1
 
+  build-flatpak:
+    name: Build Flatpak bundle
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install flatpak-builder
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            flatpak \
+            flatpak-builder \
+            elfutils
+          flatpak remote-add --user --if-not-exists flathub \
+            https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y \
+            org.gnome.Platform//46 \
+            org.gnome.Sdk//46
+
+      - name: Build Flatpak bundle
+        run: |
+          flatpak-builder \
+            --user \
+            --install \
+            --force-clean \
+            --repo=flatpak-repo \
+            build-dir \
+            flatpak/org.movemouse.MoveMouse.yml
+          flatpak build-bundle \
+            flatpak-repo \
+            move-mouse.flatpak \
+            org.movemouse.MoveMouse
+
+      - name: Rename bundle with version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mv move-mouse.flatpak "move-mouse_${VERSION}.flatpak"
+          echo "FLATPAK_PATH=move-mouse_${VERSION}.flatpak" >> "$GITHUB_ENV"
+
+      - name: Upload Flatpak artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-bundle
+          path: ${{ env.FLATPAK_PATH }}
+          retention-days: 1
+
   release:
     name: Publish GitHub Release
     runs-on: ubuntu-22.04
-    needs: build-deb
+    needs: [build-deb, build-flatpak]
 
     steps:
       - name: Checkout
@@ -70,6 +118,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: deb-package
+
+      - name: Download Flatpak artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: flatpak-bundle
 
       - name: Extract version info
         id: version
@@ -184,7 +237,8 @@ jobs:
 
           | File | Description |
           |------|-------------|
-          | \`move-mouse_${VERSION}_all.deb\` | Debian/Ubuntu package (amd64/arm64) |
+          | \`move-mouse_${VERSION}_all.deb\` | Debian/Ubuntu package |
+          | \`move-mouse_${VERSION}.flatpak\` | Flatpak bundle (any distro) |
 
           ---
 
@@ -201,9 +255,11 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           DEB_FILE=$(ls move-mouse_*.deb | head -1)
+          FLATPAK_FILE=$(ls move-mouse_*.flatpak | head -1)
 
           gh release create "$TAG" \
             --title "Move Mouse Linux ${TAG}" \
             --notes-file release_notes.md \
             --verify-tag \
-            "$DEB_FILE"
+            "$DEB_FILE" \
+            "$FLATPAK_FILE"

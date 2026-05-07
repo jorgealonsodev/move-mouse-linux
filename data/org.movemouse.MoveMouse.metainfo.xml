@@ -2,22 +2,62 @@
 <component type="desktop-application">
   <id>org.movemouse.MoveMouse</id>
   <name>Move Mouse</name>
-  <summary>Simula actividad de usuario para prevenir bloqueo de sesión</summary>
+  <summary>Keep your session alive by simulating user activity</summary>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>GPL-3.0</project_license>
+  <project_license>GPL-3.0-only</project_license>
+
   <description>
-    <p>Move Mouse simula actividad del usuario moviendo el cursor del mouse a intervalos configurables. Ideal para prevenir que la sesión se bloquee o entre en suspensión durante tareas largas.</p>
+    <p>
+      Move Mouse simulates user activity by moving the mouse cursor at configurable intervals,
+      preventing your session from locking or the screensaver from activating during long
+      unattended tasks.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>15 cursor movement directions including circular motion</li>
+      <li>Configurable interval with optional random range</li>
+      <li>Auto-pause when real user activity is detected</li>
+      <li>Auto-resume after a configurable idle period</li>
+      <li>System tray icon with AppIndicator3 support</li>
+      <li>Screensaver inhibition via GNOME session API</li>
+      <li>Pause on battery power</li>
+      <li>Session lock/unlock awareness via logind</li>
+      <li>Settings persisted to ~/.config/move-mouse-linux/settings.json</li>
+    </ul>
   </description>
-  <url type="homepage">https://github.com/sw3103/movemouse</url>
+
+  <launchable type="desktop-id">org.movemouse.MoveMouse.desktop</launchable>
+
+  <url type="homepage">https://github.com/jorgealonsodev/move-mouse-linux</url>
+  <url type="bugtracker">https://github.com/jorgealonsodev/move-mouse-linux/issues</url>
+
+  <developer id="io.github.jorgealonsodev">
+    <name>Jorge Alonso</name>
+  </developer>
+
+  <provides>
+    <binary>move-mouse</binary>
+  </provides>
+
   <screenshots>
     <screenshot type="default">
-      <caption>Bandeja del sistema</caption>
+      <caption>Main window with start/stop control</caption>
     </screenshot>
   </screenshots>
+
   <releases>
     <release version="1.0.0" date="2026-05-07">
-      <description><p>Versión inicial. Port del Move Mouse original de Windows.</p></description>
+      <description>
+        <p>Initial Linux release. Full port of the original Windows Move Mouse application.</p>
+        <ul>
+          <li>GTK3 UI with system tray support</li>
+          <li>All 26 settings from the original Windows app</li>
+          <li>X11 and Wayland (via XWayland) support</li>
+          <li>Debian package available</li>
+        </ul>
+      </description>
     </release>
   </releases>
+
   <content_rating type="oars-1.1"/>
 </component>
