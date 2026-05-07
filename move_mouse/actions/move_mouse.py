@@ -1,4 +1,4 @@
-"""Acción de movimiento del cursor."""
+"""Cursor movement action."""
 
 import logging
 from typing import Optional
@@ -15,12 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 class MoveMouseAction(ActionBase):
-    """Acción que mueve el cursor según un patrón direccional."""
+    """Action that moves the cursor according to a directional pattern."""
 
     def __init__(
         self,
         action_id: str = "move_mouse",
-        name: str = "Mover cursor",
+        name: str = "Move cursor",
         is_enabled: bool = True,
         repeat: bool = False,
         trigger: str = "interval",
@@ -110,9 +110,9 @@ class MoveMouseAction(ActionBase):
         self._abort_if_user_activity = value
 
     def execute(self, controller: MouseController) -> ActionResult:
-        """Ejecuta el movimiento delegando al controlador."""
+        """Execute the movement delegating to the controller."""
         if not self.can_execute():
-            return ActionResult(aborted=False, error="Acción deshabilitada")
+            return ActionResult(aborted=False, error="Action disabled")
 
         try:
             delay_ms = self._delay
@@ -120,6 +120,11 @@ class MoveMouseAction(ActionBase):
                 delay_ms = SPEED_DELAYS.get(self._speed, 5)
 
             controller.break_on_user_activity = self._abort_if_user_activity
+
+            logger.info(
+                "Executing movement: direction=%s, distance=%d, speed=%s",
+                self._direction.value, self._distance, self._speed.value,
+            )
 
             aborted = controller.execute_move_action(
                 direction=self._direction,
@@ -133,11 +138,12 @@ class MoveMouseAction(ActionBase):
 
             if aborted:
                 self._aborted = True
-                logger.debug("Acción %s abortada por actividad de usuario", self._id)
+                logger.info("Action %s aborted by user activity", self._id)
                 return ActionResult(aborted=True)
 
+            logger.debug("Movement completed without interruptions")
             return ActionResult()
 
         except Exception as exc:
-            logger.error("Error ejecutando acción %s: %s", self._id, exc)
+            logger.error("Error executing action %s: %s", self._id, exc)
             return ActionResult(error=str(exc))

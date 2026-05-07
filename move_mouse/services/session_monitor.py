@@ -1,4 +1,4 @@
-"""Monitor de sesión del sistema via D-Bus (logind)."""
+"""System session monitor via D-Bus (logind)."""
 
 import logging
 from typing import Callable, List, Optional
@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class SessionMonitor:
-    """Escucha señales de bloqueo/desbloqueo y suspendida/reanudada de sesión."""
+    """Listens to session lock/unlock and suspend/resume signals."""
 
     def __init__(self):
         self._callbacks: dict[str, List[Callable[[], None]]] = {
@@ -20,31 +20,31 @@ class SessionMonitor:
         self._running = False
 
     def on_lock(self, callback: Callable[[], None]) -> None:
-        """Registra callback para bloqueo de sesión."""
+        """Register callback for session lock."""
         self._callbacks["lock"].append(callback)
 
     def on_unlock(self, callback: Callable[[], None]) -> None:
-        """Registra callback para desbloqueo de sesión."""
+        """Register callback for session unlock."""
         self._callbacks["unlock"].append(callback)
 
     def on_suspend(self, callback: Callable[[], None]) -> None:
-        """Registra callback para suspensión del sistema."""
+        """Register callback for system suspend."""
         self._callbacks["suspend"].append(callback)
 
     def on_resume(self, callback: Callable[[], None]) -> None:
-        """Registra callback para reanudación del sistema."""
+        """Register callback for system resume."""
         self._callbacks["resume"].append(callback)
 
     def _emit(self, event: str) -> None:
-        logger.debug("Evento de sesión: %s", event)
+        logger.info("Session event: %s", event)
         for cb in self._callbacks[event]:
             try:
                 cb()
             except Exception:
-                logger.exception("Error en callback de sesión (%s)", event)
+                logger.exception("Error in session callback (%s)", event)
 
     def start(self) -> None:
-        """Inicia la escucha de señales D-Bus."""
+        """Start listening to D-Bus signals."""
         try:
             import dbus
             from dbus.mainloop.glib import DBusGMainLoop
@@ -67,12 +67,12 @@ class SessionMonitor:
                 dbus_interface="org.freedesktop.login1.Manager",
             )
             self._running = True
-            logger.info("SessionMonitor iniciado")
+            logger.info("SessionMonitor started")
         except Exception as exc:
-            logger.warning("No se pudo iniciar SessionMonitor: %s", exc)
+            logger.warning("Could not start SessionMonitor: %s", exc)
 
     def stop(self) -> None:
-        """Detiene la escucha de señales."""
+        """Stop listening to signals."""
         self._running = False
         if self._bus is not None:
             try:

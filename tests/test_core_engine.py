@@ -149,3 +149,45 @@ class TestEngine:
         engine._timer.fire()  # type: ignore
         assert "boom" in caplog.text
         assert engine.state == EngineState.RUNNING
+
+    def test_engine_use_glib_flag(self):
+        """Engine acepta parámetro use_glib."""
+        engine = Engine(use_glib=True)
+        assert engine._use_glib is True
+
+    def test_engine_default_use_glib_false(self):
+        """Por defecto use_glib es False."""
+        engine = Engine()
+        assert engine._use_glib is False
+
+    def test_on_executor_sleep_from_executing(self):
+        """on_executor_sleep transiciona de EXECUTING a SLEEPING."""
+        engine = Engine(timer_class=FakeTimer)
+        engine.start()
+        engine._transition(EngineState.EXECUTING)
+        engine.on_executor_sleep(duration_ms=100)
+        assert engine.state == EngineState.SLEEPING
+
+    def test_on_executor_sleep_from_running(self):
+        """on_executor_sleep transiciona de RUNNING a SLEEPING."""
+        engine = Engine(timer_class=FakeTimer)
+        engine.start()
+        assert engine.state == EngineState.RUNNING
+        engine.on_executor_sleep(duration_ms=100)
+        assert engine.state == EngineState.SLEEPING
+
+    def test_on_executor_sleep_from_idle_is_noop(self):
+        """on_executor_sleep desde IDLE no transiciona."""
+        engine = Engine(timer_class=FakeTimer)
+        engine.on_executor_sleep(duration_ms=100)
+        assert engine.state == EngineState.IDLE
+
+    def test_on_executor_sleep_wakes_back_to_running(self):
+        """Después de on_executor_sleep, el timer de wake vuelve a RUNNING."""
+        engine = Engine(timer_class=FakeTimer)
+        engine.start()
+        engine._transition(EngineState.EXECUTING)
+        engine.on_executor_sleep(duration_ms=100)
+        assert engine.state == EngineState.SLEEPING
+        engine._timer.fire()  # type: ignore
+        assert engine.state == EngineState.RUNNING

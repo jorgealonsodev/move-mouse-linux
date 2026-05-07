@@ -1,4 +1,4 @@
-"""Motor principal con máquina de estados."""
+"""Main engine with state machine."""
 
 import logging
 import threading
@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class EngineState(Enum):
-    """Estados posibles del motor."""
+    """Possible engine states."""
 
     IDLE = "idle"
     RUNNING = "running"
@@ -20,13 +20,14 @@ class EngineState(Enum):
 
 
 class Engine:
-    """Orquesta la ejecución periódica de acciones con pausas automáticas."""
+    """Orchestrates periodic action execution with automatic pauses."""
 
     def __init__(
         self,
         tick_callback: Optional[Callable[[], None]] = None,
         interval_ms: int = 30000,
         timer_class: type = threading.Timer,
+        use_glib: bool = False,
     ):
         self._tick_callback = tick_callback
         self._interval_ms = interval_ms
@@ -35,31 +36,33 @@ class Engine:
         self._listeners: List[Callable[[EngineState, EngineState], None]] = []
         self._lock = threading.Lock()
         self._state = EngineState.IDLE
+        self._use_glib = use_glib
+        self._glib_source_id: Optional[int] = None
 
     @property
     def state(self) -> EngineState:
-        """Estado actual del motor."""
+        """Current engine state."""
         with self._lock:
             return self._state
 
     def add_listener(
         self, callback: Callable[[EngineState, EngineState], None]
     ) -> None:
-        """Registra un callback que se invoca en cada cambio de estado."""
+        """Register a callback invoked on each state change."""
         self._listeners.append(callback)
 
     def _notify(self, old_state: EngineState, new_state: EngineState) -> None:
-        logger.debug("Transición: %s → %s", old_state.value, new_state.value)
+        logger.info("Engine: %s -> %s", old_state.value, new_state.value)
         for listener in self._listeners:
             try:
                 listener(old_state, new_state)
             except Exception:
-                logger.exception("Error en listener de estado")
+                logger.exception("Error in state listener")
 
     def _transition(
         self, new_state: EngineState, expected_old: Optional[EngineState] = None
     ) -> bool:
-        """Cambia el estado notificando listeners. Retorna True si el cambio fue efectivo."""
+        """Change state notifying listeners. Returns True if the change was effective."""
         with self._lock:
             if expected_old is not None and self._state != expected_old:
                 return False
@@ -68,15 +71,15 @@ class Engine:
         self._notify(old_state, new_state)
         return True
 
-    # -- Transiciones públicas --
+    # -- Public transitions --
 
     def start(self) -> None:
-        """Arranca el motor desde Idle."""
+        """Start the engine from Idle."""
         if self._transition(EngineState.RUNNING, expected_old=EngineState.IDLE):
             self._schedule_tick()
 
     def stop(self) -> None:
-        """Detiene el motor y vuelve a Idle."""
+        """Stop the engine and return to Idle."""
         with self._lock:
             if self._state == EngineState.IDLE:
                 return
@@ -84,7 +87,7 @@ class Engine:
         self._transition(EngineState.IDLE)
 
     def pause(self) -> None:
-        """Pausa el motor si está Running o Executing."""
+        """Pause the engine if Running or Executing."""
         with self._lock:
             if self._state not in (EngineState.RUNNING, EngineState.EXECUTING):
                 return
@@ -92,12 +95,12 @@ class Engine:
         self._transition(EngineState.PAUSED)
 
     def resume(self) -> None:
-        """Reanuda el motor si está Paused."""
+        """Resume the engine if Paused."""
         if self._transition(EngineState.RUNNING, expected_old=EngineState.PAUSED):
             self._schedule_tick()
 
     def lock(self) -> None:
-        """Bloquea el motor si está Running."""
+        """Lock the engine if Running."""
         with self._lock:
             if self._state != EngineState.RUNNING:
                 return
@@ -105,44 +108,99 @@ class Engine:
         self._transition(EngineState.LOCKED)
 
     def unlock(self) -> None:
-        """Desbloquea el motor si está Locked."""
+        """Unlock the engine if Locked."""
         if self._transition(EngineState.RUNNING, expected_old=EngineState.LOCKED):
             self._schedule_tick()
 
     def sleep(self, duration_ms: int) -> None:
-        """Pone el motor en Sleeping durante un tiempo (usado por SleepAction)."""
+        """Put the engine in Sleeping for a duration (used by SleepAction)."""
+        self._cancel_timer()
         if self._transition(EngineState.SLEEPING, expected_old=EngineState.EXECUTING):
             self._timer = self._timer_class(
                 duration_ms / 1000.0, self._wake_from_sleep
             )
             self._timer.start()
 
+    def on_executor_sleep(self, duration_ms: int = 1000) -> None:
+        """Callback for Executor to put engine in Sleeping.
+
+        This method is registered as ``on_sleep`` of the Executor when
+        a SleepAction is executed.
+        """
+        logger.debug("Executor requested transition to Sleeping")
+        # Try transitioning from EXECUTING (during tick) or RUNNING
+        if self._transition(EngineState.SLEEPING, expected_old=EngineState.EXECUTING):
+            self._timer = self._timer_class(
+                duration_ms / 1000.0, self._wake_from_sleep
+            )
+            self._timer.start()
+        elif self._transition(EngineState.SLEEPING, expected_old=EngineState.RUNNING):
+            self._cancel_timer()
+            self._timer = self._timer_class(
+                duration_ms / 1000.0, self._wake_from_sleep
+            )
+            self._timer.start()
+
     def _wake_from_sleep(self) -> None:
-        """Callback del timer de sleep."""
+        """Sleep timer callback."""
         if self._transition(EngineState.RUNNING, expected_old=EngineState.SLEEPING):
             self._schedule_tick()
 
-    # -- Temporizador --
+    # -- Timer --
 
     def _schedule_tick(self) -> None:
-        """Programa el próximo tick."""
-        self._timer = self._timer_class(self._interval_ms / 1000.0, self._tick)
-        self._timer.start()
+        """Schedule the next tick."""
+        if self._use_glib:
+            self._schedule_glib_tick()
+        else:
+            logger.debug("Scheduling timer for tick in %.1f ms", self._interval_ms)
+            self._timer = self._timer_class(self._interval_ms / 1000.0, self._tick)
+            self._timer.start()
+
+    def _schedule_glib_tick(self) -> None:
+        """Schedule the next tick using GLib.timeout_add."""
+        try:
+            from gi.repository import GLib
+        except (ImportError, RuntimeError):
+            # GLib not available, fallback to threading.Timer
+            logger.warning("GLib not available, using threading.Timer as fallback")
+            self._use_glib = False
+            self._timer = self._timer_class(self._interval_ms / 1000.0, self._tick)
+            self._timer.start()
+            return
+
+        self._cancel_timer()
+
+        def _tick_glib() -> bool:
+            self._tick()
+            return self.state == EngineState.RUNNING
+
+        self._glib_source_id = GLib.timeout_add(self._interval_ms, _tick_glib)
 
     def _cancel_timer(self) -> None:
-        """Cancela el timer activo."""
-        if self._timer is not None:
+        """Cancel the active timer."""
+        if self._use_glib and self._glib_source_id is not None:
+            try:
+                from gi.repository import GLib
+                GLib.source_remove(self._glib_source_id)
+                logger.debug("GLib timer cancelled (source_id=%s)", self._glib_source_id)
+            except (ImportError, RuntimeError):
+                pass
+            self._glib_source_id = None
+        elif self._timer is not None:
+            logger.debug("Threading timer cancelled")
             self._timer.cancel()
             self._timer = None
 
     def _tick(self) -> None:
-        """Callback del timer: ejecuta la acción programada."""
+        """Timer callback: execute the scheduled action."""
+        logger.debug("Engine tick fired")
         if not self._transition(EngineState.EXECUTING, expected_old=EngineState.RUNNING):
             return
         if self._tick_callback is not None:
             try:
                 self._tick_callback()
             except Exception:
-                logger.exception("Error en tick callback")
+                logger.exception("Error in tick callback")
         if self._transition(EngineState.RUNNING, expected_old=EngineState.EXECUTING):
             self._schedule_tick()

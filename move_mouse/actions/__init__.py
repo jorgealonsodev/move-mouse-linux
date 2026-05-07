@@ -1,9 +1,10 @@
-"""Paquete de acciones del motor."""
+"""Engine actions package."""
 from .base import ActionBase, ActionResult
 from .move_mouse import MoveMouseAction
 from .click_mouse import ClickMouseAction
 from .position_cursor import PositionCursorAction
 from .sleep_action import SleepAction
+from .scroll_mouse import ScrollMouseAction
 
 __all__ = [
     "ActionBase",
@@ -12,4 +13,5 @@ __all__ = [
     "ClickMouseAction",
     "PositionCursorAction",
     "SleepAction",
+    "ScrollMouseAction",
 ]

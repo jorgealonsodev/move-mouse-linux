@@ -1,4 +1,4 @@
-"""Tests para la ventana principal GTK."""
+"""Tests for the main GTK window."""
 
 import sys
 from unittest.mock import MagicMock, patch
@@ -9,7 +9,7 @@ from move_mouse.core.engine import EngineState
 
 
 def _mock_gi_modules():
-    """Configura mocks para gi y gi.repository en sys.modules."""
+    """Set up mocks for gi and gi.repository in sys.modules."""
     mock_gi = MagicMock()
     mock_gtk = MagicMock()
     mock_glib = MagicMock()
@@ -25,43 +25,43 @@ def _mock_gi_modules():
     return mock_gtk, mock_glib
 
 
-def _limpiar_modulos():
-    """Limpia los módulos cacheados para permitir reimport."""
+def _clean_modules():
+    """Clear cached modules to allow reimport."""
     for mod in list(sys.modules.keys()):
         if mod.startswith("move_mouse.ui"):
             del sys.modules[mod]
 
 
-class TestVentanaPrincipal:
-    """Tests para VentanaPrincipal con mocks de GTK."""
+class TestMainWindow:
+    """Tests for MainWindow with GTK mocks."""
 
     def setup_method(self):
-        _limpiar_modulos()
+        _clean_modules()
 
     def teardown_method(self):
-        _limpiar_modulos()
+        _clean_modules()
         for mod in ["gi", "gi.repository"]:
             sys.modules.pop(mod, None)
 
-    def _crear_ventana(self):
-        """Crea una ventana con mocks de GTK."""
+    def _create_window(self):
+        """Create a window with GTK mocks."""
         mock_gtk, mock_glib = _mock_gi_modules()
 
-        # Configurar widgets GTK
+        # Set up GTK widgets
         mock_box = MagicMock()
         mock_gtk.Box.return_value = mock_box
         mock_gtk.Orientation.VERTICAL = 0
         mock_gtk.Align.CENTER = 0
 
-        mock_etiqueta_estado = MagicMock()
-        mock_etiqueta_tiempo = MagicMock()
-        mock_boton = MagicMock()
+        mock_label_status = MagicMock()
+        mock_label_time = MagicMock()
+        mock_button = MagicMock()
 
-        # Gtk.Label crea diferentes mocks según el contexto
-        mock_gtk.Label.side_effect = [mock_etiqueta_estado, mock_etiqueta_tiempo]
-        mock_gtk.Button.return_value = mock_boton
+        # Gtk.Label creates different mocks depending on context
+        mock_gtk.Label.side_effect = [mock_label_status, mock_label_time]
+        mock_gtk.Button.return_value = mock_button
 
-        # Crear una clase base mock para Gtk.Window
+        # Create a mock base class for Gtk.Window
         class MockWindow:
             def __init__(self, **kwargs):
                 self._title = kwargs.get("title", "")
@@ -93,123 +93,123 @@ class TestVentanaPrincipal:
 
         mock_gtk.Window = MockWindow
 
-        from move_mouse.ui.window import VentanaPrincipal
+        from move_mouse.ui.window import MainWindow
 
         app_mock = MagicMock()
-        ventana = VentanaPrincipal(app_mock)
-        return ventana, mock_gtk, mock_glib
+        window = MainWindow(app_mock)
+        return window, mock_gtk, mock_glib
 
-    def test_creacion_ventana(self):
-        """La ventana se crea correctamente."""
-        ventana, mock_gtk, mock_glib = self._crear_ventana()
-        assert ventana is not None
+    def test_window_creation(self):
+        """Window is created correctly."""
+        window, mock_gtk, mock_glib = self._create_window()
+        assert window is not None
         mock_gtk.Box.assert_called_once()
 
-    def test_actualizar_estado_ejecuta_en_idle(self):
-        """actualizar_desde_hilo usa GLib.idle_add."""
-        ventana, mock_gtk, mock_glib = self._crear_ventana()
+    def test_update_state_runs_in_idle(self):
+        """update_from_thread uses GLib.idle_add."""
+        window, mock_gtk, mock_glib = self._create_window()
 
-        ventana.actualizar_desde_hilo(EngineState.RUNNING)
+        window.update_from_thread(EngineState.RUNNING)
 
         mock_glib.idle_add.assert_called_once()
 
-    def test_actualizar_estado_cambia_texto(self):
-        """_actualizar_estado cambia el texto de la etiqueta correctamente."""
-        ventana, mock_gtk, mock_glib = self._crear_ventana()
-        mock_etiqueta = MagicMock()
-        ventana._etiqueta_estado = mock_etiqueta
-        ventana._boton_toggle = MagicMock()
+    def test_update_state_changes_text(self):
+        """_update_state changes the label text correctly."""
+        window, mock_gtk, mock_glib = self._create_window()
+        mock_label = MagicMock()
+        window._label_status = mock_label
+        window._button_toggle = MagicMock()
 
-        ventana._actualizar_estado(EngineState.RUNNING)
+        window._update_state(EngineState.RUNNING)
 
-        mock_etiqueta.set_text.assert_called_with("Estado: En ejecución")
+        mock_label.set_text.assert_called_with("Status: Running")
 
-    def test_actualizar_estado_idle(self):
-        """Estado IDLE muestra texto correcto."""
-        ventana, mock_gtk, mock_glib = self._crear_ventana()
-        mock_etiqueta = MagicMock()
-        ventana._etiqueta_estado = mock_etiqueta
-        ventana._boton_toggle = MagicMock()
+    def test_update_state_idle(self):
+        """IDLE state shows correct text."""
+        window, mock_gtk, mock_glib = self._create_window()
+        mock_label = MagicMock()
+        window._label_status = mock_label
+        window._button_toggle = MagicMock()
 
-        ventana._actualizar_estado(EngineState.IDLE)
+        window._update_state(EngineState.IDLE)
 
-        mock_etiqueta.set_text.assert_called_with("Estado: Inactivo")
+        mock_label.set_text.assert_called_with("Status: Idle")
 
-    def test_actualizar_estado_locked(self):
-        """Estado LOCKED muestra texto correcto."""
-        ventana, mock_gtk, mock_glib = self._crear_ventana()
-        mock_etiqueta = MagicMock()
-        ventana._etiqueta_estado = mock_etiqueta
-        ventana._boton_toggle = MagicMock()
+    def test_update_state_locked(self):
+        """LOCKED state shows correct text."""
+        window, mock_gtk, mock_glib = self._create_window()
+        mock_label = MagicMock()
+        window._label_status = mock_label
+        window._button_toggle = MagicMock()
 
-        ventana._actualizar_estado(EngineState.LOCKED)
+        window._update_state(EngineState.LOCKED)
 
-        mock_etiqueta.set_text.assert_called_with(
-            "Estado: Bloqueado (sesión bloqueada)"
+        mock_label.set_text.assert_called_with(
+            "Status: Locked (session locked)"
         )
 
-    def test_boton_toggle_inicia_motor(self):
-        """Al hacer clic en el botón con motor IDLE, inicia el motor."""
-        ventana, mock_gtk, mock_glib = self._crear_ventana()
-        motor_mock = MagicMock()
-        motor_mock.state = EngineState.IDLE
-        ventana._motor = motor_mock
+    def test_button_toggle_starts_engine(self):
+        """Clicking button with engine IDLE starts the engine."""
+        window, mock_gtk, mock_glib = self._create_window()
+        engine_mock = MagicMock()
+        engine_mock.state = EngineState.IDLE
+        window._engine = engine_mock
 
-        ventana._on_toggle_click(None)
+        window._on_toggle_click(None)
 
-        motor_mock.start.assert_called_once()
+        engine_mock.start.assert_called_once()
 
-    def test_boton_toggle_detiene_motor(self):
-        """Al hacer clic en el botón con motor RUNNING, detiene el motor."""
-        ventana, mock_gtk, mock_glib = self._crear_ventana()
-        motor_mock = MagicMock()
-        motor_mock.state = EngineState.RUNNING
-        ventana._motor = motor_mock
+    def test_button_toggle_stops_engine(self):
+        """Clicking button with engine RUNNING stops the engine."""
+        window, mock_gtk, mock_glib = self._create_window()
+        engine_mock = MagicMock()
+        engine_mock.state = EngineState.RUNNING
+        window._engine = engine_mock
 
-        ventana._on_toggle_click(None)
+        window._on_toggle_click(None)
 
-        motor_mock.stop.assert_called_once()
+        engine_mock.stop.assert_called_once()
 
-    def test_cerrar_ventana_la_oculta(self):
-        """Al cerrar la ventana, se oculta en lugar de salir."""
-        ventana, mock_gtk, mock_glib = self._crear_ventana()
-        ventana.hide = MagicMock()
+    def test_close_window_hides_it(self):
+        """On window close, it hides instead of exiting."""
+        window, mock_gtk, mock_glib = self._create_window()
+        window.hide = MagicMock()
 
-        resultado = ventana._on_cerrar_ventana(None, None)
+        result = window._on_window_close(None, None)
 
-        ventana.hide.assert_called_once()
-        assert resultado is True
+        window.hide.assert_called_once()
+        assert result is True
 
-    def test_callback_cerrar_se_ejecuta(self):
-        """El callback on_cerrar se ejecuta al cerrar la ventana."""
-        ventana, mock_gtk, mock_glib = self._crear_ventana()
-        ventana.hide = MagicMock()
+    def test_close_callback_executes(self):
+        """The on_close callback executes when closing the window."""
+        window, mock_gtk, mock_glib = self._create_window()
+        window.hide = MagicMock()
         callback = MagicMock()
-        ventana.on_cerrar = callback
+        window.on_close = callback
 
-        ventana._on_cerrar_ventana(None, None)
+        window._on_window_close(None, None)
 
         callback.assert_called_once()
 
-    def test_actualizar_tiempo(self):
-        """actualizar_tiempo actualiza la etiqueta de tiempo."""
-        ventana, mock_gtk, mock_glib = self._crear_ventana()
-        ventana._etiqueta_tiempo = MagicMock()
+    def test_update_time(self):
+        """update_time updates the time label."""
+        window, mock_gtk, mock_glib = self._create_window()
+        window._label_time = MagicMock()
 
-        ventana.actualizar_tiempo(25)
+        window.update_time(25)
 
         mock_glib.idle_add.assert_called_once()
 
-    def test_motor_setter_actualiza_estado(self):
-        """Al asignar el motor, se actualiza el estado de la ventana."""
-        ventana, mock_gtk, mock_glib = self._crear_ventana()
-        mock_etiqueta = MagicMock()
-        ventana._etiqueta_estado = mock_etiqueta
-        ventana._boton_toggle = MagicMock()
+    def test_engine_setter_updates_state(self):
+        """When assigning the engine, the window state is updated."""
+        window, mock_gtk, mock_glib = self._create_window()
+        mock_label = MagicMock()
+        window._label_status = mock_label
+        window._button_toggle = MagicMock()
 
-        motor_mock = MagicMock()
-        motor_mock.state = EngineState.PAUSED
-        ventana.motor = motor_mock
+        engine_mock = MagicMock()
+        engine_mock.state = EngineState.PAUSED
+        window.engine = engine_mock
 
-        assert ventana.motor is motor_mock
-        mock_etiqueta.set_text.assert_called_with("Estado: Pausado")
+        assert window.engine is engine_mock
+        mock_label.set_text.assert_called_with("Status: Paused")

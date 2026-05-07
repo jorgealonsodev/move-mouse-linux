@@ -1,4 +1,4 @@
-"""Tests para la aplicación GTK principal."""
+"""Tests for the main GTK application."""
 
 import sys
 from unittest.mock import MagicMock, patch
@@ -8,15 +8,15 @@ import pytest
 from move_mouse.core.engine import EngineState
 
 
-def _limpiar_modulos():
-    """Limpia los módulos cacheados para permitir reimport."""
+def _clean_modules():
+    """Clear cached modules to allow reimport."""
     for mod in list(sys.modules.keys()):
         if mod.startswith("move_mouse.ui"):
             del sys.modules[mod]
 
 
 class MockApplication:
-    """Mock de Gtk.Application para tests."""
+    """Mock of Gtk.Application for tests."""
 
     def __init__(self, application_id=None, flags=None):
         self._application_id = application_id
@@ -46,22 +46,22 @@ class MockApplication:
 
 
 class TestMoveMouseApp:
-    """Tests para MoveMouseApp con mocks de GTK."""
+    """Tests for MoveMouseApp with GTK mocks."""
 
     def setup_method(self):
-        _limpiar_modulos()
+        _clean_modules()
 
     def teardown_method(self):
-        _limpiar_modulos()
+        _clean_modules()
         for mod in ["gi", "gi.repository"]:
             sys.modules.pop(mod, None)
 
-    def _crear_app(self):
-        """Crea MoveMouseApp con todos los mocks necesarios y llama do_startup."""
-        # Crear mocks
+    def _create_app(self):
+        """Create MoveMouseApp with all required mocks and call do_startup."""
+        # Create mocks
         mock_glib = MagicMock()
 
-        # Configurar gi modules con MockApplication
+        # Set up gi modules with MockApplication
         mock_gi = MagicMock()
         mock_gtk = MagicMock()
         mock_gtk.Application = MockApplication
@@ -78,13 +78,13 @@ class TestMoveMouseApp:
         sys.modules["gi"] = mock_gi
         sys.modules["gi.repository"] = mock_repo
 
-        # Mock de dependencias
+        # Mock dependencies
         mock_settings = MagicMock()
-        mock_settings.return_value.interval_lower_ms = 30000
+        mock_settings.return_value.lower_interval = 30
 
-        mock_bandeja_cls = MagicMock()
-        mock_bandeja_inst = MagicMock()
-        mock_bandeja_cls.return_value = mock_bandeja_inst
+        mock_tray_cls = MagicMock()
+        mock_tray_inst = MagicMock()
+        mock_tray_cls.return_value = mock_tray_inst
 
         mock_monitor_cls = MagicMock()
         mock_monitor_inst = MagicMock()
@@ -96,7 +96,7 @@ class TestMoveMouseApp:
 
         with patch("move_mouse.ui.app.Settings", mock_settings):
             with patch("move_mouse.ui.app.Engine", mock_engine_cls):
-                with patch("move_mouse.ui.app.BandejaSistema", mock_bandeja_cls):
+                with patch("move_mouse.ui.app.SystemTray", mock_tray_cls):
                     with patch(
                         "move_mouse.ui.app.SessionMonitor", mock_monitor_cls
                     ):
@@ -109,274 +109,274 @@ class TestMoveMouseApp:
                             app,
                             mock_engine_cls,
                             mock_engine_inst,
-                            mock_bandeja_cls,
-                            mock_bandeja_inst,
+                            mock_tray_cls,
+                            mock_tray_inst,
                             mock_monitor_cls,
                             mock_monitor_inst,
                             mock_glib,
                             mock_gtk,
                         )
 
-    def test_creacion_app(self):
-        """La aplicación se crea con el ID correcto."""
+    def test_app_creation(self):
+        """Application is created with the correct ID."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
         assert app.props.application_id == "org.movemouse.MoveMouse"
 
-    def test_startup_inicializa_componentes(self):
-        """do_startup inicializa motor, bandeja y monitor."""
+    def test_startup_initializes_components(self):
+        """do_startup initializes engine, tray, and monitor."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
         mock_engine_cls.assert_called_once()
-        mock_bandeja_cls.assert_called_once()
+        mock_tray_cls.assert_called_once()
         mock_monitor_cls.assert_called_once()
         mock_engine_inst.add_listener.assert_called_once()
 
-    def test_bandeja_conecta_callbacks(self):
-        """Los callbacks de la bandeja se conectan correctamente."""
+    def test_tray_connects_callbacks(self):
+        """Tray callbacks are connected correctly."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
-        assert mock_bandeja_inst.on_iniciar is not None
-        assert mock_bandeja_inst.on_detener is not None
-        assert mock_bandeja_inst.on_mostrar_ventana is not None
-        assert mock_bandeja_inst.on_acerca_de is not None
-        assert mock_bandeja_inst.on_salir is not None
+        assert mock_tray_inst.on_start is not None
+        assert mock_tray_inst.on_stop is not None
+        assert mock_tray_inst.on_show_window is not None
+        assert mock_tray_inst.on_about is not None
+        assert mock_tray_inst.on_quit is not None
 
-    def test_monitor_conecta_eventos(self):
-        """El monitor conecta eventos de sesión."""
+    def test_monitor_connects_events(self):
+        """Monitor connects session events."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
         mock_monitor_inst.on_lock.assert_called_once()
         mock_monitor_inst.on_unlock.assert_called_once()
         mock_monitor_inst.on_suspend.assert_called_once()
         mock_monitor_inst.on_resume.assert_called_once()
 
-    def test_bandeja_iniciar_arranca_motor(self):
-        """bandeja_iniciar arranca el motor si está IDLE."""
+    def test_tray_start_starts_engine(self):
+        """tray_start starts the engine if IDLE."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
         mock_engine_inst.state = EngineState.IDLE
-        mock_bandeja_inst.on_iniciar()
+        mock_tray_inst.on_start()
 
         mock_engine_inst.start.assert_called_once()
 
-    def test_bandeja_detener_detiene_motor(self):
-        """bandeja_detener detiene el motor."""
+    def test_tray_stop_stops_engine(self):
+        """tray_stop stops the engine."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
-        mock_bandeja_inst.on_detener()
+        mock_tray_inst.on_stop()
 
         mock_engine_inst.stop.assert_called_once()
 
-    def test_bandeja_salir_detiene_todo(self):
-        """bandeja_salir detiene todo y cierra la app."""
+    def test_tray_quit_stops_all(self):
+        """tray_quit stops everything and closes the app."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
         app.quit = MagicMock()
-        mock_bandeja_inst.on_salir()
+        mock_tray_inst.on_quit()
 
         mock_engine_inst.stop.assert_called_once()
         app.quit.assert_called_once()
 
-    def test_cambio_estado_actualiza_bandeja(self):
-        """El cambio de estado actualiza la bandeja."""
+    def test_state_change_updates_tray(self):
+        """State change updates the tray."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
-        app._on_cambio_estado(EngineState.IDLE, EngineState.RUNNING)
+        app._on_state_change(EngineState.IDLE, EngineState.RUNNING)
 
-        mock_bandeja_inst.actualizar_estado.assert_called_with(True)
+        mock_tray_inst.update_state.assert_called_with(True)
 
-    def test_cambio_estado_detiene_timer(self):
-        """Al cambiar a estado no-running, se detiene el timer de UI."""
+    def test_state_change_stops_timer(self):
+        """When changing to non-running state, UI timer stops."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
         app._timer_ui = 123
-        app._on_cambio_estado(EngineState.RUNNING, EngineState.IDLE)
+        app._on_state_change(EngineState.RUNNING, EngineState.IDLE)
 
         mock_glib.source_remove.assert_called_with(123)
 
-    def test_motor_bloquear_por_lock(self):
-        """El motor se bloquea al recibir evento de lock."""
+    def test_engine_lock_by_lock_event(self):
+        """Engine is locked when receiving lock event."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
         callback_lock = mock_monitor_inst.on_lock.call_args[0][0]
         callback_lock()
 
         mock_engine_inst.lock.assert_called_once()
 
-    def test_motor_desbloquear_por_unlock(self):
-        """El motor se desbloquea al recibir evento de unlock."""
+    def test_engine_unlock_by_unlock_event(self):
+        """Engine is unlocked when receiving unlock event."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
         callback_unlock = mock_monitor_inst.on_unlock.call_args[0][0]
         callback_unlock()
 
         mock_engine_inst.unlock.assert_called_once()
 
-    def test_motor_detener_por_suspend(self):
-        """El motor se detiene al recibir evento de suspend."""
+    def test_engine_stop_by_suspend_event(self):
+        """Engine is stopped when receiving suspend event."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
         callback_suspend = mock_monitor_inst.on_suspend.call_args[0][0]
         callback_suspend()
 
         mock_engine_inst.stop.assert_called_once()
 
-    def test_motor_reanudar_por_resume(self):
-        """El motor se reanuda al recibir evento de resume."""
+    def test_engine_resume_by_resume_event(self):
+        """Engine is resumed when receiving resume event."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
         callback_resume = mock_monitor_inst.on_resume.call_args[0][0]
         callback_resume()
 
         mock_engine_inst.start.assert_called_once()
 
-    def test_detener_todo_limpia_recursos(self):
-        """_detener_todo limpia motor, timer y monitor."""
+    def test_stop_all_cleans_resources(self):
+        """_stop_all cleans engine, timer, and monitor."""
         (
             app,
             mock_engine_cls,
             mock_engine_inst,
-            mock_bandeja_cls,
-            mock_bandeja_inst,
+            mock_tray_cls,
+            mock_tray_inst,
             mock_monitor_cls,
             mock_monitor_inst,
             mock_glib,
             mock_gtk,
-        ) = self._crear_app()
+        ) = self._create_app()
 
         app._timer_ui = 456
-        app._detener_todo()
+        app._stop_all()
 
         mock_engine_inst.stop.assert_called_once()
         mock_monitor_inst.stop.assert_called_once()

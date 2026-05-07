@@ -1,0 +1,23 @@
+Source: move-mouse
+Section: utils
+Priority: optional
+Maintainer: Move Mouse Linux <contact@movemouse.co.uk>
+Build-Depends: debhelper-compat (= 13), dh-python, pybuild-plugin-pyproject, python3, python3-setuptools
+Standards-Version: 4.6.0
+Homepage: https://github.com/sw3103/movemouse
+
+Package: move-mouse
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}, python3-gi, python3-xlib, python3-pydbus, gir1.2-gtk-3.0, gir1.2-appindicator3-0.1 | libayatana-appindicator3-1
+Description: Simula actividad de usuario para prevenir bloqueo de sesión
+ Move Mouse simula actividad del usuario moviendo el cursor del mouse
+ a intervalos configurables, previniendo que la sesión se bloquee
+ o entre en suspensión durante tareas largas.
+ .
+ Características:
+  * 15 direcciones de movimiento del cursor
+  * Intervalo configurable con rango aleatorio
+  * Auto-pausa al detectar actividad del usuario
+  * Auto-reanudación tras inactividad
+  * Icono en bandeja del sistema
+  * Soporte X11 y Wayland

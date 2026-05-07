@@ -20,6 +20,34 @@ Move Mouse Linux mueve el cursor del mouse a intervalos configurables para simul
 - **Soporte Wayland** (fallback, vía ydotool)
 - **Monitor de sesión** D-Bus: pausa al bloquear, reanuda al desbloquear
 - **Configuración persistente** en JSON (`~/.config/move-mouse-linux/settings.json`)
+- **Acciones**: mover cursor, click (izquierdo/medio/derecho con hold), scroll (arriba/abajo), posición absoluta, sleep (fijo/aleatorio)
+- **Flatpak** + **.deb** packaging
+
+## Estado de funcionalidades
+
+| Característica | Estado | Notas |
+|---|---|---|
+| Motor de estados (Idle/Running/Paused/Executing/Sleeping) | ✅ Completo | 6 estados con transiciones validadas |
+| Actions pipeline | ✅ Completo | Move, Click, Scroll, Position, Sleep |
+| Intervalo fijo + aleatorio | ✅ Completo | GLib timeout_add + threading.Timer |
+| Auto-pausa/resume | ✅ Completo | XScreenSaver + D-Bus fallback |
+| Settings JSON | ✅ Completo | Carga/guardado atómico, recuperación de corruptos |
+| Ventana GTK | ✅ Completo | Start/Stop, estado, close-to-tray |
+| Bandeja del sistema | ✅ Completo | AppIndicator3 + Gtk.StatusIcon fallback |
+| Backend X11 | ✅ Completo | python-xlib + XTest |
+| Backend Wayland | ⚠️ Funcional | ydotool — requiere permisos, no en Flatpak |
+| Monitor de sesión D-Bus | ✅ Completo | lock/unlock vía logind |
+| Flatpak manifest | ⚠️ Parcial | Faltan `--share=ipc` y `--talk-name=org.freedesktop.Notifications` |
+| Empaquetado .deb | ⚠️ Parcial | Nombre del paquete `move-mouse` (debería ser `move-mouse-linux`) |
+| Auto-save de settings | ❌ V2 | Debounce ≤2s no implementado |
+| Diálogo de configuración | ❌ V2 | Placeholder grayed-out no implementado |
+| Pause/Resume en bandeja | ❌ V2 | Menú solo tiene Start/Stop toggle |
+| Backends refactorizados | ❌ V2 | mouse_backend.py/x11_backend.py/wayland_backend.py como archivos separados |
+| Pruebas de integración/E2E | ❌ V2 | Phase 6 tasks pendientes (6.1-6.4) |
+| Schedules (cron) | ❌ V2 | Diferido |
+| Blackouts | ❌ V2 | Diferido |
+| Keystroke/Command/Script actions | ❌ V2 | Diferido |
+| Detección de batería | ❌ V2 | Diferido |
 
 ## Instalación
 

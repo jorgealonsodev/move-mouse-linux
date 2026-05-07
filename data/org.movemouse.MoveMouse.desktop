@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Move Mouse Linux
+Comment=Simulates user activity to prevent session lock
+Exec=move-mouse
+Icon=org.movemouse.MoveMouse
+Type=Application
+Categories=Utility;
+NoDisplay=false
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
