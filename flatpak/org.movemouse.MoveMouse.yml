@@ -26,6 +26,24 @@ finish-args:
   - --filesystem=~/.config/autostart:create
 
 modules:
+  - name: setuptools
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-deps --no-build-isolation setuptools-82.0.1-py3-none-any.whl
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/9d/76/f789f7a86709c6b087c5a2f52f911838cad707cc613162401badc665acfe/setuptools-82.0.1-py3-none-any.whl
+        sha256: a59e362652f08dcd477c78bb6e7bd9d80a7995bc73ce773050228a348ce2e5bb
+
+  - name: wheel
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-deps --no-build-isolation wheel-0.47.0-py3-none-any.whl
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/87/1b/9e33c09813d65e248f7f773119148a612516a4bea93e9c6f545f78455b7c/wheel-0.47.0-py3-none-any.whl
+        sha256: 212281cab4dff978f6cedd499cd893e1f620791ca6ff7107cf270781e587eced
+
   - name: python3-xlib
     buildsystem: simple
     build-commands:
@@ -47,7 +65,7 @@ modules:
   - name: move-mouse
     buildsystem: simple
     build-commands:
-      - pip3 install --prefix=/app --no-deps .
+      - pip3 install --prefix=/app --no-deps --no-build-isolation .
       - install -Dm644 data/org.movemouse.MoveMouse.desktop
           /app/share/applications/org.movemouse.MoveMouse.desktop
       - install -Dm644 data/org.movemouse.MoveMouse.metainfo.xml
