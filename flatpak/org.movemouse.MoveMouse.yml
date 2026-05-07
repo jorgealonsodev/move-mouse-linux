@@ -26,15 +26,6 @@ finish-args:
   - --filesystem=~/.config/autostart:create
 
 modules:
-  - name: wheel
-    buildsystem: simple
-    build-commands:
-      - pip3 install --prefix=/app --no-deps --no-build-isolation wheel-0.47.0-py3-none-any.whl
-    sources:
-      - type: file
-        url: https://files.pythonhosted.org/packages/87/1b/9e33c09813d65e248f7f773119148a612516a4bea93e9c6f545f78455b7c/wheel-0.47.0-py3-none-any.whl
-        sha256: 212281cab4dff978f6cedd499cd893e1f620791ca6ff7107cf270781e587eced
-
   - name: python3-xlib
     buildsystem: simple
     build-commands:
