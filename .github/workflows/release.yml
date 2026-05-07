@@ -27,6 +27,8 @@ jobs:
             python3-all \
             python3-setuptools \
             python3-pip \
+            python3-build \
+            python3-installer \
             pybuild-plugin-pyproject \
             fakeroot \
             lintian
