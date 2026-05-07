@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Mouse cursor arrow pointing up-left -->
+  <path d="M 24 16 L 24 104 L 44 84 L 60 112 L 74 104 L 58 76 L 84 76 Z"
+        fill="#2e3440"
+        stroke="#d8dee9"
+        stroke-width="4"
+        stroke-linejoin="round"/>
+</svg>
