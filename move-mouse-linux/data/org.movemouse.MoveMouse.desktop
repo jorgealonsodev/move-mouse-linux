@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Move Mouse
+Comment=Simula actividad de usuario para prevenir bloqueo de sesión
+Exec=move-mouse
+Icon=org.movemouse.MoveMouse
+Type=Application
+Categories=Utility;
+NoDisplay=true
+StartupNotify=false
+X-GNOME-Autostart-enabled=true

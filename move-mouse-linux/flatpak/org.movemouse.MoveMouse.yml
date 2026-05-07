@@ -1,0 +1,40 @@
+app-id: org.movemouse.MoveMouse
+runtime: org.gnome.Platform
+runtime-version: '43'
+sdk: org.gnome.Sdk
+command: move-mouse
+
+finish-args:
+  - --socket=x11
+  - --socket=wayland
+  - --talk-name=org.freedesktop.ScreenSaver
+  - --system-talk-name=org.freedesktop.login1
+  - --socket=session-bus
+  - --filesystem=~/.config/move-mouse-linux:create
+
+modules:
+  - name: python3-xlib
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-deps .
+    sources:
+      - type: archive
+        url: https://files.pythonhosted.org/packages/source/p/python-xlib/python-xlib-0.33.tar.gz
+        sha256: 5c3c8b47445841e3e1e5b4e3d4e5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3
+
+  - name: pydbus
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-deps .
+    sources:
+      - type: archive
+        url: https://files.pythonhosted.org/packages/source/p/pydbus/pydbus-0.6.0.tar.gz
+        sha256: 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b
+
+  - name: move-mouse
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app .
+    sources:
+      - type: dir
+        path: ..
