@@ -12,6 +12,9 @@ class TestSleepAction:
         action = SleepAction()
         assert action.id == "sleep"
         assert action.duration_seconds == 1.0
+        assert action.random_duration is False
+        assert action.upper_duration_ms == 0.0
+        assert action.puts_engine_to_sleep is True
 
     def test_custom_duration(self):
         action = SleepAction(duration_seconds=5.5)
@@ -53,3 +56,34 @@ class TestSleepAction:
         action = SleepAction(duration_seconds=0.0)
         action.execute(mock_controller)
         assert action.execution_count == 1
+
+    def test_random_duration_enabled(self):
+        action = SleepAction(
+            duration_seconds=1.0,
+            random_duration=True,
+            upper_duration_ms=3000.0,
+        )
+        assert action.random_duration is True
+        assert action.upper_duration_ms == 3000.0
+
+    def test_resolve_duration_random(self):
+        action = SleepAction(
+            duration_seconds=1.0,
+            random_duration=True,
+            upper_duration_ms=3000.0,
+        )
+        duration = action._resolve_duration()
+        assert 1.0 <= duration <= 3.0
+
+    def test_resolve_duration_fixed(self):
+        action = SleepAction(duration_seconds=2.5)
+        assert action._resolve_duration() == 2.5
+
+    def test_resolve_duration_random_disabled_when_upper_not_greater(self):
+        """Si upper_duration_ms <= duration_seconds, no randomiza."""
+        action = SleepAction(
+            duration_seconds=5.0,
+            random_duration=True,
+            upper_duration_ms=3000.0,  # 3s < 5s
+        )
+        assert action._resolve_duration() == 5.0

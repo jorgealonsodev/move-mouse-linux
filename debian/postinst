@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+# Crear directorio de configuración si no existe
+CONFIG_DIR="$HOME/.config/move-mouse-linux"
+if [ ! -d "$CONFIG_DIR" ]; then
+    mkdir -p "$CONFIG_DIR"
+    chmod 755 "$CONFIG_DIR"
+fi
+
+#DEBHELPER#
+
+exit 0

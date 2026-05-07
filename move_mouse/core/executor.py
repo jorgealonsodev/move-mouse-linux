@@ -1,7 +1,7 @@
-"""Ejecutor de pipeline de acciones."""
+"""Action pipeline executor."""
 
 import logging
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from move_mouse.actions.base import ActionBase, ActionResult
 from move_mouse.mouse_controller import MouseController
@@ -10,14 +10,17 @@ logger = logging.getLogger(__name__)
 
 
 class Executor:
-    """Ejecuta una lista de acciones en orden respetando configuración de
-    repetición y throttle.
+    """Executes a list of actions in order respecting repetition and throttle
+    configuration.
 
-    El executor recibe una lista de acciones y un tipo de disparador (trigger).
-    Solo ejecuta las acciones cuyo ``trigger`` coincida con el proporcionado.
-    Cada acción se ejecuta secuencialmente; si una acción es abortada por
-    actividad de usuario y tiene ``abort_if_user_activity`` activo, el
-    pipeline se detiene.
+    The executor receives a list of actions and a trigger type.
+    Only actions whose ``trigger`` matches the provided one are executed.
+    Each action runs sequentially; if an action is aborted due to user
+    activity and has ``abort_if_user_activity`` enabled, the pipeline stops.
+
+    If an action sets ``puts_engine_to_sleep = True`` (like SleepAction),
+    the ``on_sleep`` callback is invoked so the engine transitions to
+    the Sleeping state.
     """
 
     def __init__(
@@ -25,10 +28,12 @@ class Executor:
         actions: List[ActionBase],
         trigger: str = "interval",
         controller: Optional[MouseController] = None,
+        on_sleep: Optional[Callable[[], None]] = None,
     ):
         self._actions = actions
         self._trigger = trigger
         self._controller = controller
+        self._on_sleep = on_sleep
 
     @property
     def actions(self) -> List[ActionBase]:
@@ -47,50 +52,71 @@ class Executor:
         self._controller = value
 
     def execute(self, controller: Optional[MouseController] = None) -> bool:
-        """Ejecuta todas las acciones del pipeline.
+        """Execute all actions in the pipeline.
 
         Args:
-            controller: Controlador de mouse. Si no se proporciona, usa el
-                configurado en el constructor.
+            controller: Mouse controller. If not provided, uses the one
+                configured in the constructor.
 
         Returns:
-            True si la ejecución fue abortada por actividad de usuario,
-            False en caso contrario.
+            True if execution was aborted by user activity,
+            False otherwise.
         """
         ctrl = controller or self._controller
         if ctrl is None:
-            logger.error("No hay controlador de mouse disponible")
+            logger.error("No mouse controller available")
             return False
+
+        logger.info("Starting action pipeline execution (trigger=%s)", self._trigger)
+        actions_to_run = [
+            a for a in self._actions
+            if a.trigger == self._trigger and a.is_enabled and a.can_execute()
+        ]
+        actions_skipped = [
+            a for a in self._actions
+            if a.trigger == self._trigger and (not a.is_enabled or not a.can_execute())
+        ]
+        logger.info(
+            "Actions to execute: %d, skipped: %d",
+            len(actions_to_run),
+            len(actions_skipped),
+        )
+        for a in actions_skipped:
+            if not a.is_enabled:
+                logger.debug("Action skipped (disabled): %s", a.id)
+            else:
+                logger.debug("Action skipped (cannot execute): %s", a.id)
 
         aborted = False
         for action in self._actions:
-            # Filtrar por trigger
+            # Filter by trigger
             if action.trigger != self._trigger:
                 continue
 
             if not action.is_enabled:
-                logger.debug("Acción %s deshabilitada, saltando", action.id)
+                logger.debug("Action %s disabled, skipping", action.id)
                 continue
 
             if not action.can_execute():
-                logger.debug("Acción %s no puede ejecutarse en este ciclo", action.id)
+                logger.debug("Action %s cannot execute this cycle", action.id)
                 continue
 
-            logger.debug("Ejecutando acción: %s", action.id)
+            logger.debug("Executing action: %s", action.id)
             try:
                 result = action.execute(ctrl)
             except Exception as exc:
-                logger.error("Error en acción %s: %s", action.id, exc)
+                logger.error("Error in action %s: %s", action.id, exc)
                 result = ActionResult(error=str(exc))
 
-
+            logger.debug("Action %s result: aborted=%s, error=%s",
+                         action.id, result.aborted, result.error)
 
             if result.aborted:
                 logger.info(
-                    "Acción %s abortada por actividad de usuario", action.id
+                    "Action %s aborted by user activity", action.id
                 )
                 aborted = True
-                # Marcar todas las acciones restantes como abortadas
+                # Mark all remaining actions as aborted
                 for remaining in self._actions:
                     if remaining is action:
                         continue
@@ -98,13 +124,20 @@ class Executor:
                         remaining.aborted = True
                 break
 
+            # Detect SleepAction and notify engine
+            if getattr(action, "puts_engine_to_sleep", False):
+                logger.debug("SleepAction detected, notifying engine")
+                if self._on_sleep is not None:
+                    self._on_sleep()
+
+        logger.info("Pipeline execution completed (aborted=%s)", aborted)
         return aborted
 
     def reset_all_cycles(self) -> None:
-        """Reinicia el conteo de ejecuciones de todas las acciones."""
+        """Reset execution count for all actions."""
         for action in self._actions:
             action.reset_cycle()
 
     def get_actions_for_trigger(self, trigger: str) -> List[ActionBase]:
-        """Devuelve las acciones que coinciden con un trigger dado."""
+        """Return actions matching a given trigger."""
         return [a for a in self._actions if a.trigger == trigger]

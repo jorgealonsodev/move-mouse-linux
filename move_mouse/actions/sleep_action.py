@@ -1,4 +1,4 @@
-"""Acción de pausa (sleep) entre acciones."""
+"""Sleep (pause) action between other actions."""
 
 import logging
 import random
@@ -11,12 +11,19 @@ logger = logging.getLogger(__name__)
 
 
 class SleepAction(ActionBase):
-    """Acción que pausa la ejecución durante un tiempo determinado."""
+    """Action that pauses execution for a configured duration.
+
+    When executed, signals the Executor that the engine should transition
+    to the Sleeping state via the ``puts_engine_to_sleep`` attribute.
+    """
+
+    # Marker for Executor to detect it should put engine in Sleeping
+    puts_engine_to_sleep = True
 
     def __init__(
         self,
         action_id: str = "sleep",
-        name: str = "Pausa",
+        name: str = "Sleep",
         is_enabled: bool = True,
         repeat: bool = False,
         trigger: str = "interval",
@@ -24,6 +31,8 @@ class SleepAction(ActionBase):
         interval_throttle: int = 0,
         interval_execution_count: int = 1,
         duration_seconds: float = 1.0,
+        random_duration: bool = False,
+        upper_duration_ms: float = 0.0,
     ):
         super().__init__(
             action_id=action_id,
@@ -36,6 +45,8 @@ class SleepAction(ActionBase):
             interval_execution_count=interval_execution_count,
         )
         self._duration_seconds = duration_seconds
+        self._random_duration = random_duration
+        self._upper_duration_ms = upper_duration_ms
 
     @property
     def duration_seconds(self) -> float:
@@ -44,19 +55,45 @@ class SleepAction(ActionBase):
     @duration_seconds.setter
     def duration_seconds(self, value: float) -> None:
         if value < 0:
-            raise ValueError("La duración no puede ser negativa")
+            raise ValueError("Duration cannot be negative")
         self._duration_seconds = value
 
+    @property
+    def random_duration(self) -> bool:
+        return self._random_duration
+
+    @random_duration.setter
+    def random_duration(self, value: bool) -> None:
+        self._random_duration = value
+
+    @property
+    def upper_duration_ms(self) -> float:
+        return self._upper_duration_ms
+
+    @upper_duration_ms.setter
+    def upper_duration_ms(self, value: float) -> None:
+        if value < 0:
+            raise ValueError("upper_duration_ms cannot be negative")
+        self._upper_duration_ms = value
+
+    def _resolve_duration(self) -> float:
+        """Calculate effective duration, applying randomization if applicable."""
+        upper_s = self._upper_duration_ms / 1000.0
+        if self._random_duration and upper_s > self._duration_seconds:
+            return random.uniform(self._duration_seconds, upper_s)
+        return self._duration_seconds
+
     def execute(self, controller: MouseController) -> ActionResult:
-        """Pausa la ejecución durante la duración configurada."""
+        """Pause execution for the configured duration."""
         if not self.can_execute():
-            return ActionResult(aborted=False, error="Acción deshabilitada")
+            return ActionResult(aborted=False, error="Action disabled")
 
         try:
-            logger.debug("Pausa de %.3f segundos", self._duration_seconds)
-            time.sleep(self._duration_seconds)
+            duration = self._resolve_duration()
+            logger.debug("Sleep for %.3f seconds", duration)
+            time.sleep(duration)
             self._execution_count += 1
             return ActionResult()
         except Exception as exc:
-            logger.error("Error en pausa %s: %s", self._id, exc)
+            logger.error("Error in sleep %s: %s", self._id, exc)
             return ActionResult(error=str(exc))

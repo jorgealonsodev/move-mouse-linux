@@ -76,11 +76,11 @@ Chain strategy: stacked-to-main
 
 ## Phase 5: Packaging (~450 lines)
 
-- [ ] 5.1 Create `flatpak/org.movemouse.MoveMouse.yaml` — Flatpak manifest with `org.gnome.Sdk`, `--socket=x11`, `--share=ipc`, D-Bus talk names, XDG config filesystem; Wayland socket excluded
-- [ ] 5.2 Create `debian/control` — Package name `move-mouse-linux`,Depends: `python3-xlib`, `python3-gi`, `gir1.2-ayatanaappindicator3-0.1 | gir1.2-appindicator3-0.1`, `python3-dbus`, `python3-xdg`
-- [ ] 5.3 Create `debian/rules` — dh-compatible build rules
-- [ ] 5.4 Create `debian/move-mouse-linux.desktop` — `.desktop` file for app launcher
-- [ ] 5.5 Create `debian/copyright`, `debian/changelog`
+- [x] 5.1 Create `flatpak/org.movemouse.MoveMouse.yaml` — Flatpak manifest with `org.gnome.Sdk`, `--socket=x11`, `--share=ipc`, D-Bus talk names, XDG config filesystem; Wayland socket excluded
+- [x] 5.2 Create `debian/control` — Package name `move-mouse-linux`,Depends: `python3-xlib`, `python3-gi`, `gir1.2-ayatanaappindicator3-0.1 | gir1.2-appindicator3-0.1`, `python3-dbus`, `python3-xdg`
+- [x] 5.3 Create `debian/rules` — dh-compatible build rules
+- [x] 5.4 Create `debian/move-mouse-linux.desktop` — `.desktop` file for app launcher
+- [x] 5.5 Create `debian/copyright`, `debian/changelog`
 - [ ] 5.6 Verify `flatpak-builder` build succeeds locally
 
 ---

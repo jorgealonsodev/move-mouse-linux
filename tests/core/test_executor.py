@@ -178,3 +178,32 @@ class TestExecutor:
         assert a1 in interval_actions
         assert a3 in interval_actions
         assert a2 not in interval_actions
+
+    def test_on_sleep_callback_invoked_for_sleep_action(self):
+        """El callback on_sleep se invoca cuando una acción marca puts_engine_to_sleep."""
+        from move_mouse.actions.sleep_action import SleepAction
+
+        action = SleepAction(duration_seconds=0.0)
+        mock_ctrl = MagicMock()
+        on_sleep = MagicMock()
+        executor = Executor(actions=[action], controller=mock_ctrl, on_sleep=on_sleep)
+
+        executor.execute()
+
+        on_sleep.assert_called_once()
+
+    def test_on_sleep_callback_not_invoked_for_regular_action(self):
+        """El callback on_sleep NO se invoca para acciones normales."""
+        action = _FakeAction(action_id="a1")
+        mock_ctrl = MagicMock()
+        on_sleep = MagicMock()
+        executor = Executor(actions=[action], controller=mock_ctrl, on_sleep=on_sleep)
+
+        executor.execute()
+
+        on_sleep.assert_not_called()
+
+    def test_on_sleep_defaults_to_none(self):
+        """El parámetro on_sleep por defecto es None."""
+        executor = Executor(actions=[])
+        assert executor._on_sleep is None

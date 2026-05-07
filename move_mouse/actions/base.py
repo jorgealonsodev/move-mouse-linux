@@ -1,4 +1,4 @@
-"""Clase base abstracta para todas las acciones."""
+"""Abstract base class for all actions."""
 
 import logging
 from abc import ABC, abstractmethod
@@ -12,17 +12,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ActionResult:
-    """Resultado de la ejecución de una acción."""
+    """Result of an action execution."""
 
     aborted: bool = False
     error: Optional[str] = None
 
 
 class ActionBase(ABC):
-    """Clase base abstracta para acciones del motor.
+    """Abstract base class for engine actions.
 
-    Cada acción tiene propiedades de configuración (id, nombre, repetición,
-    disparador) y debe implementar ``can_execute`` y ``execute``.
+    Each action has configuration properties (id, name, repetition,
+    trigger) and must implement ``can_execute`` and ``execute``.
     """
 
     def __init__(
@@ -96,10 +96,10 @@ class ActionBase(ABC):
         return self._execution_count
 
     def can_execute(self) -> bool:
-        """Determina si la acción puede ejecutarse en este ciclo.
+        """Determine if the action can execute this cycle.
 
-        Verifica ``is_enabled`` y, si el modo es ``throttle``, respeta el
-        conteo de ejecuciones por intervalo.
+        Checks ``is_enabled`` and, if mode is ``throttle``, respects the
+        execution count per interval.
         """
         if not self._is_enabled:
             return False
@@ -110,14 +110,14 @@ class ActionBase(ABC):
 
     @abstractmethod
     def execute(self, controller: MouseController) -> ActionResult:
-        """Ejecuta la acción usando el controlador de mouse provisto.
+        """Execute the action using the provided mouse controller.
 
-        Retorna un ``ActionResult`` indicando si fue abortada o si hubo error.
+        Returns an ``ActionResult`` indicating if it was aborted or had an error.
         """
         ...
 
     def reset_cycle(self) -> None:
-        """Reinicia el conteo de ejecuciones para un nuevo ciclo de intervalo."""
+        """Reset execution count for a new interval cycle."""
         self._execution_count = 0
 
     def __repr__(self) -> str:

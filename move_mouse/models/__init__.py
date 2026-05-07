@@ -1,4 +1,4 @@
-"""Paquete de modelos de dominio."""
+"""Domain models package."""
 from .settings import Settings
 from .schedule import Schedule, Blackout
 

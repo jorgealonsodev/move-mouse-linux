@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.movemouse.MoveMouse</id>
+  <name>Move Mouse</name>
+  <summary>Simula actividad de usuario para prevenir bloqueo de sesión</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0</project_license>
+  <description>
+    <p>Move Mouse simula actividad del usuario moviendo el cursor del mouse a intervalos configurables. Ideal para prevenir que la sesión se bloquee o entre en suspensión durante tareas largas.</p>
+  </description>
+  <url type="homepage">https://github.com/sw3103/movemouse</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Bandeja del sistema</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="1.0.0" date="2026-05-07">
+      <description><p>Versión inicial. Port del Move Mouse original de Windows.</p></description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component>

@@ -1,0 +1,205 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-deb:
+    name: Build .deb package
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            devscripts \
+            debhelper \
+            dh-python \
+            python3-all \
+            python3-setuptools \
+            python3-pip \
+            pybuild-plugin-pyproject \
+            fakeroot \
+            lintian
+
+      - name: Build .deb
+        run: |
+          make deb
+
+      - name: Rename .deb with version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          DEB=$(ls ../move-mouse_*.deb | head -1)
+          DEST="move-mouse_${VERSION}_all.deb"
+          cp "$DEB" "$DEST"
+          echo "DEB_PATH=$DEST" >> "$GITHUB_ENV"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-package
+          path: ${{ env.DEB_PATH }}
+          retention-days: 1
+
+  release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-22.04
+    needs: build-deb
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download .deb artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deb-package
+
+      - name: Extract version info
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+
+          # Determine previous tag for changelog link
+          PREV_TAG=$(git tag --sort=-creatordate | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n '2p' || echo "")
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "prev_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes
+        id: notes
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PREV_TAG: ${{ steps.version.outputs.prev_tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Collect commits since previous tag (or all if first release)
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s" --no-merges)
+            COMPARE_LINK="**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${TAG}"
+          else
+            COMMITS=$(git log --pretty=format:"- %s" --no-merges)
+            COMPARE_LINK="**Full Changelog**: https://github.com/${{ github.repository }}/commits/${TAG}"
+          fi
+
+          # Classify commits into sections
+          ADDED=$(echo "$COMMITS" | grep -iE "^- (feat|add|new):" | sed 's/^- feat: /- /i;s/^- add: /- /i;s/^- new: /- /i' || true)
+          FIXED=$(echo "$COMMITS" | grep -iE "^- (fix|bug|hotfix):" | sed 's/^- fix: /- /i;s/^- bug: /- /i;s/^- hotfix: /- /i' || true)
+          CHANGED=$(echo "$COMMITS" | grep -iE "^- (refactor|change|update|improve|perf):" | sed 's/^- [a-z]*: /- /i' || true)
+          DOCS=$(echo "$COMMITS" | grep -iE "^- (docs|doc):" | sed 's/^- docs*: /- /i' || true)
+          OTHER=$(echo "$COMMITS" | grep -ivE "^- (feat|add|new|fix|bug|hotfix|refactor|change|update|improve|perf|docs|doc):" || true)
+
+          # Build release body
+          BODY="## Move Mouse Linux ${TAG}
+
+          ### Highlights
+
+          Move Mouse Linux ${TAG} is now available. This release includes improvements to mouse movement reliability, full settings implementation, and packaging fixes for Debian-based distributions.
+
+          ### Installation
+
+          Download \`move-mouse_${VERSION}_all.deb\` from the assets below and install with:
+
+          \`\`\`bash
+          sudo dpkg -i move-mouse_${VERSION}_all.deb
+          sudo apt-get install -f   # install missing dependencies if needed
+          \`\`\`
+
+          Then launch from your application menu or run:
+
+          \`\`\`bash
+          move-mouse
+          \`\`\`"
+
+          if [ -n "$ADDED" ]; then
+            BODY="${BODY}
+
+          ### Added
+
+          ${ADDED}"
+          fi
+
+          if [ -n "$FIXED" ]; then
+            BODY="${BODY}
+
+          ### Fixed
+
+          ${FIXED}"
+          fi
+
+          if [ -n "$CHANGED" ]; then
+            BODY="${BODY}
+
+          ### Changed
+
+          ${CHANGED}"
+          fi
+
+          if [ -n "$DOCS" ]; then
+            BODY="${BODY}
+
+          ### Documentation
+
+          ${DOCS}"
+          fi
+
+          if [ -n "$OTHER" ]; then
+            BODY="${BODY}
+
+          ### Other Changes
+
+          ${OTHER}"
+          fi
+
+          BODY="${BODY}
+
+          ### System Requirements
+
+          - Linux with X11 or Wayland session
+          - Python 3.8 or later
+          - GTK 3 runtime (\`libgtk-3-0\`)
+          - \`python3-xlib\` for X11 mouse control
+          - \`python3-pydbus\` for D-Bus idle detection
+
+          ### Assets
+
+          | File | Description |
+          |------|-------------|
+          | \`move-mouse_${VERSION}_all.deb\` | Debian/Ubuntu package (amd64/arm64) |
+
+          ---
+
+          ${COMPARE_LINK}"
+
+          # Write to file to avoid quoting issues
+          echo "$BODY" > release_notes.md
+          echo "notes_file=release_notes.md" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          DEB_FILE=$(ls move-mouse_*.deb | head -1)
+
+          gh release create "$TAG" \
+            --title "Move Mouse Linux ${TAG}" \
+            --notes-file release_notes.md \
+            --verify-tag \
+            "$DEB_FILE"

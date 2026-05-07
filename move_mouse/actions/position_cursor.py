@@ -1,4 +1,4 @@
-"""Acción de posicionamiento absoluto del cursor."""
+"""Absolute cursor positioning action."""
 
 import logging
 
@@ -9,12 +9,12 @@ logger = logging.getLogger(__name__)
 
 
 class PositionCursorAction(ActionBase):
-    """Acción que mueve el cursor a una coordenada absoluta."""
+    """Action that moves the cursor to an absolute coordinate."""
 
     def __init__(
         self,
         action_id: str = "position_cursor",
-        name: str = "Posicionar cursor",
+        name: str = "Position cursor",
         is_enabled: bool = True,
         repeat: bool = False,
         trigger: str = "interval",
@@ -54,15 +54,15 @@ class PositionCursorAction(ActionBase):
         self._y = value
 
     def execute(self, controller: MouseController) -> ActionResult:
-        """Mueve el cursor a la posición absoluta (x, y)."""
+        """Move cursor to absolute position (x, y)."""
         if not self.can_execute():
-            return ActionResult(aborted=False, error="Acción deshabilitada")
+            return ActionResult(aborted=False, error="Action disabled")
 
         try:
             controller.move_to(self._x, self._y)
             self._execution_count += 1
-            logger.debug("Cursor posicionado en (%d, %d)", self._x, self._y)
+            logger.debug("Cursor positioned at (%d, %d)", self._x, self._y)
             return ActionResult()
         except Exception as exc:
-            logger.error("Error posicionando cursor %s: %s", self._id, exc)
+            logger.error("Error positioning cursor %s: %s", self._id, exc)
             return ActionResult(error=str(exc))

@@ -1,4 +1,4 @@
-"""Modelo de configuración de la aplicación."""
+"""Application settings model."""
 
 import json
 import logging
@@ -12,69 +12,103 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Settings:
-    """Configuración de Move Mouse con valores por defecto."""
+    """Move Mouse settings with default values matching the original Windows app."""
 
-    interval_lower_ms: int = 30000
-    interval_upper_ms: Optional[int] = None
-    action_list: List[Dict[str, Any]] = field(default_factory=list)
-    auto_pause_enabled: bool = True
-    auto_pause_threshold_ms: int = 3000
-    auto_resume_enabled: bool = True
-    auto_resume_after_ms: int = 10000
-    cursor_direction: str = "square"
-    cursor_distance: int = 5
-    cursor_speed: str = "normal"
+    # Interval
+    lower_interval: int = 30  # seconds
+    upper_interval: int = 60  # seconds
+    random_interval: bool = False
+
+    # Auto Pause/Resume
+    auto_pause: bool = False
+    auto_resume: bool = False
+    auto_resume_seconds: int = 30
+
+    # Behavior
+    active_when_locked: bool = False
+    minimise_on_stop: bool = False
+    start_at_launch: bool = False
+
+    # UI Options
+    hide_from_taskbar: bool = False
+    hide_main_window: bool = False
+    hide_system_tray_icon: bool = False
+    show_system_tray_notifications: bool = False
+    show_taskbar_status: bool = True
+
+    # Actions (list of action dicts)
+    actions: List[Dict[str, Any]] = field(default_factory=list)
+
+    # Schedules
+    schedules: List[Dict[str, Any]] = field(default_factory=list)
+
+    # Blackouts
+    blackouts: List[Dict[str, Any]] = field(default_factory=list)
+
+    # Logging
+    enable_logging: bool = False
+    log_level: str = "INFO"
+
+    # UI / Platform Options (from original Windows app)
+    hide_from_alt_tab: bool = False
+    topmost_when_running: bool = False
+    prevent_screen_burn: bool = False
+    show_move_mouse_status: bool = False
+    disable_button_animation: bool = False
+    pause_on_battery: bool = False
+    launch_at_logon: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convierte la configuración a diccionario."""
+        """Convert settings to dictionary."""
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Settings":
-        """Crea una instancia desde un diccionario, completando campos faltantes con defaults."""
-        campos_conocidos = {f.name for f in cls.__dataclass_fields__.values()}
-        filtrado = {k: v for k, v in data.items() if k in campos_conocidos}
-        return cls(**filtrado)
+        """Create an instance from a dictionary, filling missing fields with defaults."""
+        known_fields = {f.name for f in cls.__dataclass_fields__.values()}
+        filtered = {k: v for k, v in data.items() if k in known_fields}
+        return cls(**filtered)
 
     def save(self, path: str) -> None:
-        """Guarda la configuración en JSON de forma atómica."""
-        directorio = os.path.dirname(path)
-        if directorio:
-            os.makedirs(directorio, exist_ok=True)
+        """Save settings to JSON atomically."""
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
         with tempfile.NamedTemporaryFile(
-            mode="w", dir=directorio, delete=False, suffix=".json"
+            mode="w", dir=directory, delete=False, suffix=".json"
         ) as tmp:
             json.dump(self.to_dict(), tmp, indent=2)
             tmp_name = tmp.name
         os.replace(tmp_name, path)
-        logger.debug("Configuración guardada en %s", path)
+        logger.info("Settings saved to %s", path)
 
     @classmethod
     def load(cls, path: str) -> "Settings":
-        """Carga configuración desde JSON.
+        """Load settings from JSON.
 
-        Si el archivo no existe o está corrupto, devuelve defaults.
+        If the file does not exist or is corrupt, returns defaults.
         """
         if not os.path.exists(path):
             logger.info(
-                "Archivo de configuración no encontrado en %s, usando defaults", path
+                "Settings file not found at %s, using defaults", path
             )
             return cls()
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             if not isinstance(data, dict):
-                raise ValueError("El contenido no es un diccionario")
+                raise ValueError("Content is not a dictionary")
+            logger.info("Settings loaded from %s", path)
             return cls.from_dict(data)
         except (json.JSONDecodeError, TypeError, ValueError) as exc:
             logger.error(
-                "Configuración corrupta en %s: %s. Usando defaults.", path, exc
+                "Corrupt settings at %s: %s. Using defaults.", path, exc
             )
             return cls()
 
     @classmethod
     def default_path(cls) -> str:
-        """Devuelve la ruta por defecto basada en XDG."""
+        """Return the default path based on XDG."""
         try:
             from xdg.BaseDirectory import xdg_config_home
 
