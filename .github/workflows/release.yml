@@ -32,6 +32,8 @@ jobs:
             pybuild-plugin-pyproject \
             fakeroot \
             lintian
+          # setuptools <61 does not read pyproject.toml — upgrade it
+          sudo pip3 install --upgrade "setuptools>=61" "wheel"
 
       - name: Build .deb
         run: |
